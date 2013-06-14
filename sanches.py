@@ -94,7 +94,7 @@ class Sanchez(object):
     def _is_ok(self, ph):
         if len(ph) < 8: return False  # don't want slim phrases
         if 4 < ph.find(':') < 15: return False  # don't want definitions
-        if ph.startswith('REDIRECCIÓN '): return False  # TODO: deal with redirections
+        if ph.startswith('REDIRECCIÓN ') or ph.startswith('REDIRECT '): return False  # TODO: deal with redirections
         return True
 
     def _is_ok_for_twitter(self, ph):
@@ -138,18 +138,18 @@ class Sanchez(object):
         f = random.sample(Sanchez.fmts, 1)[0]
         return f.format(w=w, p=p)
 
-    def publish(self):
+    def publish(self, debug):
         qtty = 15
         words = [x[0] for x in self.get_words().most_common(qtty)]
         words = random.sample(words, qtty)
         phrase = self.wiki(words)
-        if not debug:
-            return
         if phrase:
-            print("I'm publishing:", phrase)
+            if debug:
+                print("I'm publishing:", phrase)
             self.twit.statuses.update(status=phrase)
         else:
-            print("Couldn't get an appropriate phrase")
+            if debug:
+                print("Couldn't get an appropriate phrase")
 
 import config
 snch_snch_dict = config.authkeys
@@ -163,6 +163,5 @@ def test():
     print('{0}: {1}'.format(w, d))
 
 if __name__ == '__main__':
-    global debug
     debug = False
-    snch_snch.publish()
+    snch_snch.publish(debug)
