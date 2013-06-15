@@ -18,6 +18,8 @@ class Sanchez(object):
             'Sobre {w}, para tener en cuenta: {p}',
             '{p} ¡Y hablan de {w}!',
             'Se habla de {w}, pero recordemos: {p} Por favor RT',
+            'Cuando todos hablan sobre {w}, yo pienso: {p}',
+            'Yo el año pasado ya decía: {p}. Pensar que ahora hablan de {w}',
             ]
 
     def __init__(self, keys, stopwords=None):
@@ -92,9 +94,10 @@ class Sanchez(object):
         return None
 
     def _is_ok(self, ph):
+        print(ph) # sac
         if len(ph) < 8: return False  # don't want slim phrases
         if 4 < ph.find(':') < 15: return False  # don't want definitions
-        if ph.startswith('REDIRECCIÓN ') or ph.startswith('REDIRECT '): return False  # TODO: deal with redirections
+        if ph.startswith('REDIRECCIÓN') or ph.startswith('REDIRECT'): return False  # TODO: deal with redirections
         return True
 
     def _is_ok_for_twitter(self, ph):
@@ -147,8 +150,7 @@ class Sanchez(object):
             if debug:
                 print("I'm publishing:", phrase)
             self.twit.statuses.update(status=phrase)
-        else:
-            if debug:
+        elif debug:
                 print("Couldn't get an appropriate phrase")
 
 import config
