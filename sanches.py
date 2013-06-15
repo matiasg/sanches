@@ -94,7 +94,6 @@ class Sanchez(object):
         return None
 
     def _is_ok(self, ph):
-        print(ph) # sac
         if len(ph) < 8: return False  # don't want slim phrases
         if 4 < ph.find(':') < 15: return False  # don't want definitions
         if ph.startswith('REDIRECCIÓN') or ph.startswith('REDIRECT'): return False  # TODO: deal with redirections
