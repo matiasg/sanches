@@ -63,10 +63,15 @@ class Sanchez(object):
                 self.tl.append(t)
                 users_counter[user] += 1
 
-    def get_words(self):
+    def get_words(self, top=15, top2=5):
+        '''return top2 most common 2-word sequence and complete with (top-top2) 1-words.
+        If the 2-word "A B" is in the top2, then both A and B are subtracted from the 1-words.'''
         self.load_timeline()
         normal_tweets = [' '.join(self._normal(w) for tw in self.tl for w in tw['text'].split())]
         cnt = Counter()
+        cnt2 = Counter()
+
+        # count 1-words and 2-words
         for tweet in normal_tweets:
             tsp = tweet.split()
             for i in range(len(tsp)):
@@ -74,8 +79,17 @@ class Sanchez(object):
                     cnt[tsp[i]] += 1
                 if i + 1 >= len(tsp): continue
                 if any(self._filter_word(w) for w in tsp[i : i+2]):
-                    cnt['{0} {1}'.format(*tsp[i : i+2])] += 2
-        return cnt
+                    cnt2['{0} {1}'.format(*tsp[i : i+2])] += 2
+
+        # subtract 2-words from 1-words
+        for ww in cnt2.most_common(top2):
+            wwsplit = ww[0].split()
+            cnt[wwsplit[0]] -= cnt2[ww[1]]
+            cnt[wwsplit[1]] -= cnt2[ww[1]]
+
+        # take union of most common in cnt and cnt2
+        ret = set(cnt2.most_common(top2)) | set(cnt.most_common(top - top2))
+        return ret
 
     def _take_out_tags(self, phrase):
         bs = BeautifulSoup(phrase)
@@ -142,15 +156,16 @@ class Sanchez(object):
 
     def publish(self, debug):
         qtty = 15
-        words = [x[0] for x in self.get_words().most_common(qtty)]
+        words = [x[0] for x in self.get_words(top=qtty)]
         words = random.sample(words, qtty)
         phrase = self.wiki(words)
-        if phrase:
-            if debug:
+        if debug:
+            if phrase:
                 print("I'm publishing:", phrase)
-            self.twit.statuses.update(status=phrase)
-        elif debug:
+            else:
                 print("Couldn't get an appropriate phrase")
+        elif phrase:
+                self.twit.statuses.update(status=phrase)
 
 import config
 snch_snch_dict = config.authkeys
