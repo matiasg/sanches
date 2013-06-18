@@ -190,6 +190,11 @@ class Sanchez(object):
                 with open(self.previous_file, 'a') as o:
                     o.write('{word}|{phrase}|{ts}\n'.format(**wp))
 
+    def _followers(self):
+        return set(self.twit.followers.ids()['ids'])
+
+    def _followed(self):
+        return set(self.twit.friends.ids()['ids'])
 
 import config
 snch_snch_dict = config.authkeys
