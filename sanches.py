@@ -29,7 +29,7 @@ class Sanchez(object):
             'Parece en joda, pero {w}',
             ]
 
-    def __init__(self, keys, stopwords=None, previous=None):
+    def __init__(self, keys, stopwords=None, previous=None, non_repeat_time=3600*24*4):
         super(Sanchez, self).__init__()
         self.keys = keys
         self.auth = twitter.OAuth(
@@ -49,11 +49,13 @@ class Sanchez(object):
 
         self.previous_file = previous or os.path.join(curdir, 'previous.txt')
 
+        self.prev_topics = set()
+        min_tms = time.time() - non_repeat_time
         if os.path.isfile(self.previous_file):
             with open(self.previous_file, 'r') as i:
-                self.prev_topics = set(l.split('|', 1)[0] for l in i)
-        else:
-            self.prev_topics = set()
+                w,p,t  = l.strip().split('|')
+                if float(t) > min_tms:
+                    self.prev_topics.add(w)
 
         self._npt = str.maketrans('', '', string.punctuation)
         self.sentences = re.compile('[A-Z][^.]+.')
