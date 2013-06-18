@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 
+#TODO: agregar archivo con logs que se levante para no repetir topicos en cierto tiempo
+
 import json
 import os
 import random
 import re
 import string
+import time
 import twitter
 import urllib
 from bs4 import BeautifulSoup
@@ -19,10 +22,14 @@ class Sanchez(object):
             '{p} ¡Y hablan de {w}!',
             'Se habla de {w}, pero recordemos: {p} Por favor RT',
             'Cuando todos hablan sobre {w}, yo pienso: {p}',
-            'Yo el año pasado ya decía: {p}. Pensar que ahora hablan de {w}',
+            'Yo el año pasado ya decía: {p} Pensar que ahora hablan de {w}',
+            'Lo más gracioso de todo esto es: {w}',
+            'Cada vez que alguien dice {w}, olvida que {p}',
+            '¿En serio {w}?',
+            'Parece en joda, pero {w}',
             ]
 
-    def __init__(self, keys, stopwords=None):
+    def __init__(self, keys, stopwords=None, previous=None):
         super(Sanchez, self).__init__()
         self.keys = keys
         self.auth = twitter.OAuth(
@@ -34,11 +41,19 @@ class Sanchez(object):
         self.twit = twitter.Twitter(auth=self.auth)
         self.count = 200
 
+        curdir = os.path.abspath(os.path.dirname(__file__))
         if not stopwords:
-            stopwords = os.path.join(
-                    os.path.abspath(os.path.dirname(__file__)), 'stopwords.txt')
+            stopwords = os.path.join(curdir, 'stopwords.txt')
         with open(stopwords, 'r') as i:
             self.stopwords = set(l.strip() for l in i)
+
+        self.previous_file = previous or os.path.join(curdir, 'previous.txt')
+
+        if os.path.isfile(self.previous_file):
+            with open(self.previous_file, 'r') as i:
+                self.prev_topics = set(l.split('|', 1)[0] for l in i)
+        else:
+            self.prev_topics = set()
 
         self._npt = str.maketrans('', '', string.punctuation)
         self.sentences = re.compile('[A-Z][^.]+.')
@@ -49,6 +64,7 @@ class Sanchez(object):
     def _filter_word(self, w):
         if not w: return False
         if w in self.stopwords: return False
+        if w in self.prev_topics: return False
         if len(w) < 3: return False
         if w.startswith('@'): return False
         return True
@@ -84,8 +100,8 @@ class Sanchez(object):
         # subtract 2-words from 1-words
         for ww in cnt2.most_common(top2):
             wwsplit = ww[0].split()
-            cnt[wwsplit[0]] -= cnt2[ww[1]]
-            cnt[wwsplit[1]] -= cnt2[ww[1]]
+            cnt[wwsplit[0]] -= ww[1]
+            cnt[wwsplit[1]] -= ww[1]
 
         # take union of most common in cnt and cnt2
         ret = set(cnt2.most_common(top2)) | set(cnt.most_common(top - top2))
@@ -111,6 +127,7 @@ class Sanchez(object):
         if len(ph) < 8: return False  # don't want slim phrases
         if 4 < ph.find(':') < 15: return False  # don't want definitions
         if ph.startswith('REDIRECCIÓN') or ph.startswith('REDIRECT'): return False  # TODO: deal with redirections
+        # TODO: add DISAMBIG (see independiente, carlos)
         return True
 
     def _is_ok_for_twitter(self, ph):
@@ -134,7 +151,7 @@ class Sanchez(object):
                 txt = j.get('query', {}).get('pages', {}).get(i, {}).get('extract', '')
                 phrase = self.get_twitter_phrase(w, txt)
                 if phrase:
-                    return phrase
+                    return {'word': w, 'phrase': phrase}
         return None
 
     def ddg(self, words):
@@ -158,14 +175,18 @@ class Sanchez(object):
         qtty = 15
         words = [x[0] for x in self.get_words(top=qtty)]
         words = random.sample(words, qtty)
-        phrase = self.wiki(words)
+        wp = self.wiki(words)
         if debug:
-            if phrase:
-                print("I'm publishing:", phrase)
+            if wp:
+                print("I'm publishing:", wp['phrase'])
             else:
                 print("Couldn't get an appropriate phrase")
-        elif phrase:
-                self.twit.statuses.update(status=phrase)
+        elif wp:
+                self.twit.statuses.update(status=wp['phrase'])
+                wp['ts'] = int(time.time())
+                with open(self.previous_file, 'a') as o:
+                    o.write('{word}|{phrase}|{ts}\n'.format(**wp))
+
 
 import config
 snch_snch_dict = config.authkeys
@@ -175,8 +196,6 @@ def test():
     w = snch_snch.get_words()
     print('\n'.join('%s: %d' % (wp[0], wp[1]) for wp in w.most_common(20)))
 
-    w, d = snch_snch.wiki([x[0] for x in w.most_common(10)])
-    print('{0}: {1}'.format(w, d))
 
 if __name__ == '__main__':
     debug = False
