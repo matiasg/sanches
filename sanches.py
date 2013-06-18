@@ -53,9 +53,10 @@ class Sanchez(object):
         min_tms = time.time() - non_repeat_time
         if os.path.isfile(self.previous_file):
             with open(self.previous_file, 'r') as i:
-                w,p,t  = l.strip().split('|')
-                if float(t) > min_tms:
-                    self.prev_topics.add(w)
+                for l in i:
+                    w,p,t  = l.strip().split('|')
+                    if float(t) > min_tms:
+                        self.prev_topics.add(w)
 
         self._npt = str.maketrans('', '', string.punctuation)
         self.sentences = re.compile('[A-Z][^.]+.')
