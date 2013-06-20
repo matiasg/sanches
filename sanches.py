@@ -23,10 +23,10 @@ class Sanchez(object):
             'Se habla de {w}, pero recordemos: {p} Por favor RT',
             'Cuando todos hablan sobre {w}, yo pienso: {p}',
             'Yo el año pasado ya decía: {p} Pensar que ahora hablan de {w}',
-            'Lo más gracioso de todo esto es: {w}',
+            'Lo más gracioso de todo esto es: {p}',
             'Cada vez que alguien dice {w}, olvida que {p}',
-            '¿En serio {w}?',
-            'Parece en joda, pero {w}',
+            '¿En serio {p}?',
+            'Parece en joda, pero {p}',
             ]
 
     def __init__(self, keys, stopwords=None, previous=None, non_repeat_time=3600*24*4):
