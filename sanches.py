@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-#TODO: agregar archivo con logs que se levante para no repetir topicos en cierto tiempo
 
+import argparse
+import config
 import json
 import os
 import random
@@ -147,8 +148,11 @@ class Sanchez(object):
         while words:
             w = words.pop()
             whole_url = url % urllib.parse.quote(w)
-            u = urllib.request.urlopen(whole_url)
-            j = json.loads(u.read().decode('utf8'))
+            try:
+                u = urllib.request.urlopen(whole_url)
+                j = json.loads(u.read().decode('utf8'))
+            except urllib.error.URLError:
+                continue  # this will most likely not work. Log something!
             ids = j.get('query', {}).get('pages', None)
             if not ids or '-1' in ids: continue
             for i in ids:
@@ -207,15 +211,21 @@ class Sanchez(object):
     def _followed(self):
         return set(self.twit.friends.ids()['ids'])
 
-import config
-snch_snch_dict = config.authkeys
-snch_snch = Sanchez(snch_snch_dict)
 
-def test():
-    w = snch_snch.get_words()
-    print('\n'.join('%s: %d' % (wp[0], wp[1]) for wp in w.most_common(20)))
+def _get_parser():
+    parser = argparse.ArgumentParser(description='Publish nonsense in Twitter')
+    parser.add_argument('--debug', action='store_true')
+    return parser
+
+
+def main(arguments):
+    """does everything (?)"""
+    snch_snch_dict = config.authkeys
+    snch_snch = Sanchez(snch_snch_dict)
+    snch_snch.publish(arguments.debug)
 
 
 if __name__ == '__main__':
-    debug = False
-    snch_snch.publish(debug)
+    parser = _get_parser()
+    args = parser.parse_args()
+    main(args)
