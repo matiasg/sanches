@@ -181,7 +181,8 @@ class Sanchez(object):
             callables = f[1]
             for part in callables:
                 d[part] = callables[part](d[part])
-        return f[0].format(**d)
+            f = f[0]
+        return f.format(**d)
 
     def publish(self, debug):
         qtty = 15
