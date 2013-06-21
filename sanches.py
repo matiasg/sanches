@@ -17,17 +17,20 @@ from collections import Counter
 class Sanchez(object):
     """docstring for Sanchez"""
     ddg_cookies = {'l': 'ar-es', 'ad': 'es_AR'}
+    lower_first = lambda x : x[0].lower() + x[1:]
     lower_first_no_period = lambda x : x[0].lower() + x[1:-1]
     fmts = ['Dicen {w}. {p}',
             'Sobre {w}, para tener en cuenta: {p}',
             '{p} ¡Y hablan de {w}!',
             'Se habla de {w}, pero recordemos: {p} Por favor RT',
-            'Cuando todos hablan sobre {w}, yo pienso: {p}',
-            'Yo el año pasado ya decía: {p} Pensar que ahora hablan de {w}',
-            'Lo más gracioso de todo esto es: {p}',
-            'Cada vez que alguien dice {w}, olvida que {p}',
+            ('Cuando todos hablan sobre {w}, yo pienso: {p}', {'p': lower_first}),
+            ('Yo el año pasado ya decía que {p} Pensar que ahora hablan de {w}', {'p': lower_first}),
+            ('Lo más gracioso de todo esto es: {p}', {'p': lower_first_no_period}),
+            ('Cada vez que alguien dice {w}, olvida que {p}', {'p': lower_first_no_period}),
             ('¿En serio {p}?', {'p': lower_first_no_period}),
-            'Parece en joda, pero {p}',
+            ('Parece en joda, pero {p}', {'p': lower_first_no_period}),
+            '{p} Sí, lo sé; de no creer.',
+            ('{w}, y dale con {w}. ¿Por qué no piensan que {p}?', {'p': lower_first_no_period}),
             ]
 
     def __init__(self, keys, stopwords=None, previous=None, non_repeat_time=3600*24*4):
