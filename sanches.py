@@ -135,6 +135,7 @@ class Sanchez(object):
         if len(ph) < 8: return False  # don't want slim phrases
         if 4 < ph.find(':') < 15: return False  # don't want definitions
         if ph.startswith('REDIRECCIÓN') or ph.startswith('REDIRECT'): return False  # TODO: deal with redirections
+        if 'wiki' in ph.lower(): return False  # avoid Wikimedia, Wikiversity, etc.
         # TODO: add DISAMBIG (see independiente, carlos)
         return True
 
