@@ -17,6 +17,7 @@ from collections import Counter
 class Sanchez(object):
     """docstring for Sanchez"""
     ddg_cookies = {'l': 'ar-es', 'ad': 'es_AR'}
+    lower_first_no_period = lambda x : x[0].lower() + x[1:-1]
     fmts = ['Dicen {w}. {p}',
             'Sobre {w}, para tener en cuenta: {p}',
             '{p} ¡Y hablan de {w}!',
@@ -25,7 +26,7 @@ class Sanchez(object):
             'Yo el año pasado ya decía: {p} Pensar que ahora hablan de {w}',
             'Lo más gracioso de todo esto es: {p}',
             'Cada vez que alguien dice {w}, olvida que {p}',
-            '¿En serio {p}?',
+            ('¿En serio {p}?', {'p': lower_first_no_period}),
             'Parece en joda, pero {p}',
             ]
 
@@ -171,8 +172,13 @@ class Sanchez(object):
         return w, defintn
 
     def _embelish(self, w, p):
+        d = dict(w=w, p=p)
         f = random.sample(Sanchez.fmts, 1)[0]
-        return f.format(w=w, p=p)
+        if type(f) != str:
+            callables = f[1]
+            for part in callables:
+                d[part] = callables[part](d[part])
+        return f[0].format(**d)
 
     def publish(self, debug):
         qtty = 15
