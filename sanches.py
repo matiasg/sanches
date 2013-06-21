@@ -102,7 +102,7 @@ class Sanchez(object):
                 if self._filter_word(tsp[i]):
                     cnt[tsp[i]] += 1
                 if i + 1 >= len(tsp): continue
-                if any(self._filter_word(w) for w in tsp[i : i+2]):
+                if self._filter_word(tsp[i : i+2]):
                     cnt2['{0} {1}'.format(*tsp[i : i+2])] += 2
 
         # subtract 2-words from 1-words
@@ -212,10 +212,13 @@ class Sanchez(object):
     def _followed(self):
         return set(self.twit.friends.ids()['ids'])
 
+    def test(self):
+        print(self._filter_word('en vivo'))
 
 def _get_parser():
     parser = argparse.ArgumentParser(description='Publish nonsense in Twitter')
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--test', action='store_true')
     return parser
 
 
@@ -223,6 +226,10 @@ def main(arguments):
     """does everything (?)"""
     snch_snch_dict = config.authkeys
     snch_snch = Sanchez(snch_snch_dict)
+    if arguments.test:
+        snch_snch.test()
+        import sys
+        sys.exit()
     snch_snch.publish(arguments.debug)
 
 
