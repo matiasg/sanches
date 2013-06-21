@@ -187,7 +187,7 @@ class Sanchez(object):
         elif wp:
                 self.twit.statuses.update(status=wp['phrase'])
                 wp['ts'] = int(time.time())
-                wp['p'] = wp['p'].replace('\n', ' ')  # make sure each line in previous was one tweet.
+                wp['phrase'] = wp['phrase'].replace('\n', ' ')  # make sure each line in previous was one tweet.
                 with open(self.previous_file, 'a') as o:
                     o.write('{word}|{phrase}|{ts}\n'.format(**wp))
 
