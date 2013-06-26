@@ -25,13 +25,15 @@ class Sanchez(object):
             '{p} ¡Y hablan de {w}!',
             'Se habla de {w}, pero recordemos: {p} Por favor RT',
             ('Cuando todos hablan sobre {w}, yo pienso: {p}', {'p': lower_first}),
-            ('Yo el año pasado ya decía que {p} Pensar que ahora hablan de {w}', {'p': lower_first}),
+            'Yo el año pasado decía "{p}" Pensar que ahora hablan de {w}.',
             ('Lo más gracioso de todo esto es: {p}', {'p': lower_first_no_period}),
             ('Cada vez que alguien dice {w}, olvida que {p}', {'p': lower_first_no_period}),
             ('¿En serio {p}?', {'p': lower_first_no_period}),
             ('Parece en joda, pero {p}', {'p': lower_first_no_period}),
             '{p} Sí, lo sé; de no creer.',
             ('{w}, y dale con {w}. ¿Por qué no piensan que {p}?', {'p': lower_first_no_period}),
+            ('¿Alguien sabía que {p}?', {'p': lower_first}),
+            ('Lo más loco de {w} es {p}', {'p': lower_first}),
             ]
 
     def __init__(self, keys, stopwords=None, previous=None, non_repeat_time=3600*24*4):
@@ -64,7 +66,7 @@ class Sanchez(object):
                         self.prev_topics.add(w)
 
         self._npt = str.maketrans('', '', string.punctuation)
-        self.sentences = re.compile('[A-Z][^.]+.')
+        self.sentences = re.compile('[A-Z][^.]+\.')
 
     def _normal(self, w):
         return w.translate(self._npt).lower()
@@ -135,6 +137,7 @@ class Sanchez(object):
         if len(ph) < 8: return False  # don't want slim phrases
         if 4 < ph.find(':') < 15: return False  # don't want definitions
         if ph.startswith('REDIRECCIÓN') or ph.startswith('REDIRECT'): return False  # TODO: deal with redirections
+        if '[' in ph: return False  # avoid
         phlower = ph.lower()
         if 'wiki' in phlower: return False  # avoid Wikimedia, Wikiversity, etc.
         if 'wikciona' in phlower: return False  # avoid wikcionario
