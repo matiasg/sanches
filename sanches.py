@@ -17,7 +17,6 @@ from collections import Counter
 
 class Sanchez(object):
     """docstring for Sanchez"""
-    ddg_cookies = {'l': 'ar-es', 'ad': 'es_AR'}
     lower_first = lambda x : x[0].lower() + x[1:]
     lower_first_no_period = lambda x : x[0].lower() + x[1:-1]
     fmts = ['Dicen {w}. {p}',
@@ -33,7 +32,11 @@ class Sanchez(object):
             '{p} Sí, lo sé; de no creer.',
             ('{w}, y dale con {w}. ¿Por qué no piensan que {p}?', {'p': lower_first_no_period}),
             ('¿Alguien sabía que {p}?', {'p': lower_first}),
-            ('Lo más loco de {w} es {p}', {'p': lower_first}),
+            ('Lo más loco de {w} es que {p}', {'p': lower_first}),
+            ('Lamentablemente, {p}', {'p': lower_first}),
+            ('Por suerte, {p}', {'p': lower_first}),
+            ('Noticia urgente: {p}', {'p': lower_first}),
+            ('Es raro pero {p}', {'p': lower_first}),
             ]
 
     def __init__(self, keys, stopwords=None, previous=None, non_repeat_time=3600*24*4):
@@ -66,7 +69,8 @@ class Sanchez(object):
                         self.prev_topics.add(w)
 
         self._npt = str.maketrans('', '', string.punctuation)
-        self.sentences = re.compile('[A-Z][^.]+\.')
+        self.sentences = re.compile('[A-Z][^.]{4,}\.')
+        self.chars_to_replace = [(re.compile('[\n:]+'), ': ')]
 
     def _normal(self, w):
         return w.translate(self._npt).lower()
@@ -120,7 +124,10 @@ class Sanchez(object):
     def _take_out_tags(self, phrase):
         bs = BeautifulSoup(phrase)
         parts = bs.findAll(text=True)
-        return ''.join(parts)
+        notags = ''.join(parts)
+        for reg, subst in self.chars_to_replace:
+            notags = reg.sub(subst, notags)
+        return notags
 
     def get_twitter_phrase(self, word, txt):
         phrases = self.sentences.findall(txt)
