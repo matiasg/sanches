@@ -2,6 +2,7 @@
 
 
 import argparse
+import collections
 import config
 import json
 import os
@@ -59,14 +60,21 @@ class Sanchez(object):
 
         self.previous_file = previous or os.path.join(curdir, 'previous.txt')
 
-        self.prev_topics = set()
+        self.prev_words = set()
+        self.prev_constructs = collections.defaultdict(int)
         min_tms = time.time() - non_repeat_time
         if os.path.isfile(self.previous_file):
             with open(self.previous_file, 'r') as i:
                 for l in i:
-                    w,p,t  = l.strip().split('|')
+                    lsp = l.strip().split('|')
+                    if len(lsp) == 3:
+                        w, p, t = lsp
+                        c = None
+                    else:
+                        w, c, p, t = lsp
                     if float(t) > min_tms:
-                        self.prev_topics.add(w)
+                        self.prev_words.add(w)
+                        self.prev_constructs[c] += 1
 
         self._npt = str.maketrans('', '', string.punctuation)
         self.sentences = re.compile('[A-Z][^.]{4,}\.')
@@ -78,7 +86,7 @@ class Sanchez(object):
     def _filter_word(self, w):
         if not w: return False
         if w in self.stopwords: return False
-        if w in self.prev_topics: return False
+        if w in self.prev_words: return False
         if len(w) < 3: return False
         if w.startswith('@'): return False
         return True
@@ -135,10 +143,10 @@ class Sanchez(object):
         for ph in mixed_phs:
             ph_notags = self._take_out_tags(ph)
             if self._is_ok(ph_notags):
-                possible_ret = self._embelish(word, ph_notags)
+                possible_ret, construct = self._embelish(word, ph_notags)
                 if self._is_ok_for_twitter(possible_ret):
-                    return possible_ret
-        return None
+                    return possible_ret, construct
+        return None, None
 
     def _is_ok(self, ph):
         if len(ph) < 8: return False  # don't want slim phrases
@@ -174,9 +182,9 @@ class Sanchez(object):
                 u = urllib.request.urlopen(page_url % params)
                 j = json.loads(u.read().decode('utf8'))
                 txt = j.get('query', {}).get('pages', {}).get(i, {}).get('extract', '')
-                phrase = self.get_twitter_phrase(w, txt)
+                phrase, construct = self.get_twitter_phrase(w, txt)
                 if phrase:
-                    return {'word': w, 'phrase': phrase}
+                    return {'word': w, 'phrase': phrase, 'construct': construct}
         return None
 
     def ddg(self, words):
@@ -194,13 +202,16 @@ class Sanchez(object):
 
     def _embelish(self, w, p):
         d = dict(w=w, p=p)
-        f = random.sample(Sanchez.fmts, 1)[0]
+        sorted_fmts = sorted(Sanchez.fmts,
+                key = lambda c: self.prev_constructs[c[0]],
+                reverse=True)
+        f = random.sample(sorted_fmts[:5], 1)[0]
         if type(f) != str:
             callables = f[1]
             for part in callables:
                 d[part] = callables[part](d[part])
             f = f[0]
-        return f.format(**d)
+        return f.format(**d), f
 
     def publish(self, debug):
         qtty = 15
@@ -217,7 +228,7 @@ class Sanchez(object):
                 wp['ts'] = int(time.time())
                 wp['phrase'] = wp['phrase'].replace('\n', ' ')  # make sure each line in previous was one tweet.
                 with open(self.previous_file, 'a') as o:
-                    o.write('{word}|{phrase}|{ts}\n'.format(**wp))
+                    o.write('{word}|{construct}|{phrase}|{ts}\n'.format(**wp))
 
     def _followers(self):
         return set(self.twit.followers.ids()['ids'])
@@ -227,6 +238,7 @@ class Sanchez(object):
 
     def test(self):
         print(self._filter_word('en vivo'))
+
 
 def _get_parser():
     parser = argparse.ArgumentParser(description='Publish nonsense in Twitter')
