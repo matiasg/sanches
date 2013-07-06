@@ -87,7 +87,7 @@ class Sanchez(object):
 
     def _filter_word(self, w):
         if not w: return False
-        if w in self.stopwords: return False
+        if all(x in self.stopwords for x in w.split()): return False
         if w in self.prev_words: return False
         if len(w) < 3: return False
         if w.startswith('@'): return False
