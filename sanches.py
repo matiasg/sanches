@@ -218,7 +218,7 @@ class Sanchez(object):
         return f.format(**d), f
 
     def publish(self, debug):
-        qtty = 15
+        qtty = 25
         words = [x[0] for x in self.get_words(top=qtty)]
         if debug: print('Most common words:', words)
         words = random.sample(words, qtty)
