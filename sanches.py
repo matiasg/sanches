@@ -2,7 +2,6 @@
 
 
 import argparse
-import collections
 import config
 import json
 import os
@@ -140,12 +139,13 @@ class Sanchez(object):
             notags = reg.sub(subst, notags)
         return notags
 
-    def get_twitter_phrase(self, word, txt):
+    def get_twitter_phrase(self, word, txt, debug):
         phrases = self.sentences.findall(txt)
         mixed_phs = random.sample(phrases, len(phrases))
         for ph in mixed_phs:
             ph_notags = self._take_out_tags(ph)
             if self._is_ok(ph_notags):
+                if debug: print('Considering phrase:', ph_notags)
                 possible_ret, construct = self._embelish(word, ph_notags)
                 if self._is_ok_for_twitter(possible_ret):
                     return possible_ret, construct
@@ -166,7 +166,7 @@ class Sanchez(object):
     def _is_ok_for_twitter(self, ph):
         return len(ph) <= 140
 
-    def wiki(self, words):
+    def wiki(self, words, debug):
         '''Lookup words in wikipedia'''
         url = 'https://es.wikipedia.org/w/api.php?action=query&prop=info&format=json&titles=%s'
         page_url = 'https://es.wikipedia.org/w/api.php?%s'
@@ -183,9 +183,10 @@ class Sanchez(object):
             for i in ids:
                 params = urllib.parse.urlencode({'action': 'query', 'pageids': i, 'prop': 'extracts', 'format': 'json'})
                 u = urllib.request.urlopen(page_url % params)
+                if debug: print('Reading', u)
                 j = json.loads(u.read().decode('utf8'))
                 txt = j.get('query', {}).get('pages', {}).get(i, {}).get('extract', '')
-                phrase, construct = self.get_twitter_phrase(w, txt)
+                phrase, construct = self.get_twitter_phrase(w, txt, debug)
                 if phrase:
                     return {'word': w, 'phrase': phrase, 'construct': construct}
         return None
@@ -217,8 +218,9 @@ class Sanchez(object):
     def publish(self, debug):
         qtty = 15
         words = [x[0] for x in self.get_words(top=qtty)]
+        if debug: print('Most common words:', words)
         words = random.sample(words, qtty)
-        wp = self.wiki(words)
+        wp = self.wiki(words, debug)
         if debug:
             if wp:
                 print("I'm publishing:", wp['phrase'])
