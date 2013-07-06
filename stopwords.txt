@@ -20,6 +20,8 @@ atras
 bajo
 bastante
 bien
+buen
+bueno
 cada
 cierta
 ciertas
@@ -146,6 +148,7 @@ sois
 solamente
 solo
 somos
+sos
 soy
 su
 sus
@@ -191,6 +194,7 @@ vaya
 verdad
 verdaderacierto
 verdadero
+vos
 vosotras
 vosotros
 voy

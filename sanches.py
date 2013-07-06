@@ -172,6 +172,7 @@ class Sanchez(object):
         page_url = 'https://es.wikipedia.org/w/api.php?%s'
         while words:
             w = words.pop()
+            if debug: print('Trying word:', w)
             whole_url = url % urllib.parse.quote(w)
             try:
                 u = urllib.request.urlopen(whole_url)
@@ -182,9 +183,9 @@ class Sanchez(object):
             if not ids or '-1' in ids: continue
             for i in ids:
                 params = urllib.parse.urlencode({'action': 'query', 'pageids': i, 'prop': 'extracts', 'format': 'json'})
-                url = page_url % params
-                if debug: print('Reading', url)
-                u = urllib.request.urlopen(page_url % params)
+                def_url = page_url % params
+                if debug: print('Reading', def_url)
+                u = urllib.request.urlopen(def_url)
                 j = json.loads(u.read().decode('utf8'))
                 txt = j.get('query', {}).get('pages', {}).get(i, {}).get('extract', '')
                 phrase, construct = self.get_twitter_phrase(w, txt, debug)
