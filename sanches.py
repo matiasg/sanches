@@ -38,6 +38,8 @@ class Sanchez(object):
             ('Por suerte, {p}', {'p': lower_first}),
             ('Noticia urgente: {p}', {'p': lower_first}),
             ('Es raro pero {p}', {'p': lower_first}),
+            '{p}',
+            ('Hablando de {w}, {p}', {'p': lower_first}),
             ]
 
     def __init__(self, keys, stopwords=None, previous=None, non_repeat_time=3600*24*4):
