@@ -182,8 +182,9 @@ class Sanchez(object):
             if not ids or '-1' in ids: continue
             for i in ids:
                 params = urllib.parse.urlencode({'action': 'query', 'pageids': i, 'prop': 'extracts', 'format': 'json'})
+                url = page_url % params
+                if debug: print('Reading', url)
                 u = urllib.request.urlopen(page_url % params)
-                if debug: print('Reading', u)
                 j = json.loads(u.read().decode('utf8'))
                 txt = j.get('query', {}).get('pages', {}).get(i, {}).get('extract', '')
                 phrase, construct = self.get_twitter_phrase(w, txt, debug)
