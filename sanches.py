@@ -66,9 +66,10 @@ class Sanchez(object):
     def _filter_word(self, w):
         if not w: return False
         if all(x in self.stopwords for x in w.split()): return False
-        if w in self.prev_words: return False
-        if len(w) < 3: return False
-        if w.startswith('@'): return False
+        if w in self.prev_words: return False  # no previous words
+        if len(w) < 3: return False  # no short words
+        if w.startswith('@'): return False  # no usernames
+        if w.startswith('#'): return False  # no hashtags
         return True
 
     def load_timeline(self):
