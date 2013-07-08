@@ -10,6 +10,9 @@ lower_first = lambda x : x[0].lower() + x[1:]
 # put first letter as lowercase and take last char
 lower_first_no_period = lambda x : x[0].lower() + x[1:-1]
 
+# take last char out
+no_period = lambda x : x[:-1]
+
 formats = {
     'Dicen {w}. {p}': None,
     'Sobre {w}, para tener en cuenta: {p}': None,
@@ -31,4 +34,6 @@ formats = {
     'Es raro pero {p}': {'p': lower_first},
     '{p}': None,
     'Hablando de {w}, {p}': {'p': lower_first},
+    'Ma que {w} ni {w}? {p}!': {'p': no_period},
+    'No me hagan hablar de {w} porque digo que {p}': {'p': lower_first},
     }
