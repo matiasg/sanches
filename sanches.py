@@ -14,33 +14,11 @@ import urllib
 from bs4 import BeautifulSoup
 from collections import Counter
 
+import formats
+
 
 class Sanchez(object):
-    """docstring for Sanchez"""
-    lower_first = lambda x : x[0].lower() + x[1:]
-    lower_first_no_period = lambda x : x[0].lower() + x[1:-1]
-    fmts = {'Dicen {w}. {p}': None,
-            'Sobre {w}, para tener en cuenta: {p}': None,
-            '{p} ¡Y hablan de {w}!': None,
-            'Se habla de {w}, pero recordemos: {p} Por favor RT': None,
-            'Cuando todos hablan sobre {w}, yo pienso: {p}': {'p': lower_first},
-            'Yo el año pasado decía "{p}" Pensar que ahora hablan de {w}.': None,
-            'Lo más gracioso de todo esto es: {p}': {'p': lower_first_no_period},
-            'Cada vez que alguien dice {w}, olvida que {p}': {'p': lower_first_no_period},
-            '¿En serio {p}?': {'p': lower_first_no_period},
-            'Parece en joda, pero {p}': {'p': lower_first_no_period},
-            '{p} Sí, lo sé; de no creer.': None,
-            '{w}, y dale con {w}. ¿Por qué no piensan que {p}?': {'p': lower_first_no_period},
-            '¿Alguien sabía que {p}?': {'p': lower_first},
-            'Lo más loco de {w} es que {p}': {'p': lower_first},
-            'Lamentablemente, {p}': {'p': lower_first},
-            'Por suerte, {p}': {'p': lower_first},
-            'Noticia urgente: {p}': {'p': lower_first},
-            'Es raro pero {p}': {'p': lower_first},
-            '{p}': None,
-            'Hablando de {w}, {p}': {'p': lower_first},
-           }
-
+    """Main class, does everything"""
     def __init__(self, keys, stopwords=None, previous=None, non_repeat_time=3600*24*4):
         super(Sanchez, self).__init__()
         self.keys = keys
@@ -62,7 +40,7 @@ class Sanchez(object):
         self.previous_file = previous or os.path.join(curdir, 'previous.txt')
 
         self.prev_words = set()
-        self.prev_constructs = dict([(c, 0) for c in Sanchez.fmts])
+        self.prev_constructs = dict([(c, 0) for c in formats.formats])
         min_tms = time.time() - non_repeat_time
         if os.path.isfile(self.previous_file):
             with open(self.previous_file, 'r') as i:
@@ -208,10 +186,10 @@ class Sanchez(object):
 
     def _embelish(self, w, p):
         d = dict(w=w, p=p)
-        sorted_fmts = sorted(Sanchez.fmts,
+        sorted_fmts = sorted(formats.formats,
                 key = lambda c: self.prev_constructs[c])
         f = random.sample(sorted_fmts[:5], 1)[0]
-        callables = Sanchez.fmts[f]
+        callables = formats.formats[f]
         if callables:
             for part in callables:
                 d[part] = callables[part](d[part])
