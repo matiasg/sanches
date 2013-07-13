@@ -36,4 +36,7 @@ formats = {
     'Hablando de {w}, {p}': {'p': lower_first},
     'Ma que {w} ni {w}? {p}!': {'p': no_period},
     'No me hagan hablar de {w} porque digo que {p}': {'p': lower_first},
+    '{p} Daría ganas de reír si no diera ganas de llorar.': None,
+    '{p} Daría ganas de llorar si no diera ganas de reír.': None,
+    '{p}! Mátenme.': {'p': no_period},
     }
