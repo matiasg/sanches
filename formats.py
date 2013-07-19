@@ -10,6 +10,9 @@ lower_first = lambda x : x[0].lower() + x[1:]
 # put first letter as lowercase and take last char
 lower_first_no_period = lambda x : x[0].lower() + x[1:-1]
 
+# put first letter as uppercase
+upper_first = lambda x : x[0].upper() + x[1:]
+
 # take last char out
 no_period = lambda x : x[:-1]
 
@@ -25,7 +28,7 @@ formats = {
     '¿En serio {p}?': {'p': lower_first_no_period},
     'Parece en joda, pero {p}': {'p': lower_first_no_period},
     '{p} Sí, lo sé; de no creer.': None,
-    '{w}, y dale con {w}. ¿Por qué no piensan que {p}?': {'p': lower_first_no_period},
+    '{w}, y dale con {w}. ¿Por qué no piensan que {p}?': {'p': lower_first_no_period, 'w': upper_first},
     '¿Alguien sabía que {p}?': {'p': lower_first_no_period},
     'Lo más loco de {w} es que {p}': {'p': lower_first},
     'Lamentablemente, {p}': {'p': lower_first},
