@@ -220,8 +220,23 @@ class Sanchez(object):
     def _followed(self):
         return set(self.twit.friends.ids()['ids'])
 
+    def _users_few(self, ids):
+        return self.twit.users.lookup(user_id=','.join([str(i) for i in ids]))
+
+    def _users(self, ids):
+        users = []
+        ids_list = list(ids)
+        for i in range(0, len(ids), 50):
+            users.extend(self._users_few(ids_list[i : i+50]))
+        return users
+
     def test(self):
         print(self._filter_word('en vivo'))
+
+    def non_followed_followers(self):
+        dif = self._followers() - self._followed()
+        dif_info = self._users(dif)
+        return dict([(u['screen_name'], u['name']) for u in dif_info])
 
 
 def _get_parser():
