@@ -39,6 +39,8 @@ cuando
 de
 del
 dentro
+día
+dice
 donde
 dos
 el
@@ -53,6 +55,7 @@ en
 encima
 entonces
 entre
+en vivo
 era
 eramos
 eran
@@ -66,12 +69,14 @@ estado
 estais
 estamos
 estan
+este
 estoy
 fin
 fue
 fueron
 fui
 fuimos
+gran
 gueno
 ha
 hace
@@ -81,6 +86,8 @@ hacen
 hacer
 haces
 hago
+hasta
+hoy
 incluso
 in  tenta
 intentais
@@ -94,8 +101,11 @@ la
 largo
 las
 le
+les
 lo
 los
+mañana
+mas
 más
 me
 mi
@@ -106,6 +116,7 @@ muchos
 muy
 ni
 no
+noche
 nos
 nosotros
 o
@@ -139,6 +150,7 @@ saben
 saber
 sabes
 se
+semana
 ser
 si
 siendo
@@ -148,6 +160,7 @@ sois
 solamente
 solo
 somos
+son
 sos
 soy
 su
