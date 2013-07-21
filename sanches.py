@@ -238,6 +238,11 @@ class Sanchez(object):
         dif_info = self._users(dif)
         return dict([(u['screen_name'], u['name']) for u in dif_info])
 
+    def follow_non_followed(self):
+        nff = self.non_followed_followers()
+        for scrn in nff:
+            self.twit.friendships.create(screen_name=scrn)
+
 
 def _get_parser():
     parser = argparse.ArgumentParser(description='Publish nonsense in Twitter')
