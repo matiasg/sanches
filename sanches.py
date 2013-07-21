@@ -238,8 +238,10 @@ class Sanchez(object):
         dif_info = self._users(dif)
         return dict([(u['screen_name'], u['name']) for u in dif_info])
 
-    def follow_non_followed(self):
+    def follow_non_followed(self, debug):
         nff = self.non_followed_followers()
+        if debug:
+            print('Will follow:', nff)
         for scrn in nff:
             self.twit.friendships.create(screen_name=scrn)
 
@@ -248,6 +250,7 @@ def _get_parser():
     parser = argparse.ArgumentParser(description='Publish nonsense in Twitter')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--test', action='store_true')
+    parser.add_argument('--fnf', action='store_true', help='follow non followers')
     return parser
 
 
@@ -259,7 +262,10 @@ def main(arguments):
         snch_snch.test()
         import sys
         sys.exit()
-    snch_snch.publish(arguments.debug)
+    if arguments.fnf:
+        snch_snch.follow_non_followed(arguments.debug)
+    else:
+        snch_snch.publish(arguments.debug)
 
 
 if __name__ == '__main__':
