@@ -65,7 +65,9 @@ class Sanchez(object):
 
     def _filter_word(self, w):
         if not w: return False
-        if all(x in self.stopwords for x in w.split()): return False
+        if w in self.stopwords: return False
+        # two-words can be made of stopwords
+        if ' ' in w and all(x in self.stopwords for x in w.split()): return False
         if w in self.prev_words: return False  # no previous words
         if len(w) < 3: return False  # no short words
         if w.startswith('@'): return False  # no usernames
@@ -230,13 +232,20 @@ class Sanchez(object):
             users.extend(self._users_few(ids_list[i : i+50]))
         return users
 
+    def _screen_names(self, ids):
+        udict = self._users(ids)
+        return dict([(u['screen_name'], u['name']) for u in udict])
+
     def test(self):
         print(self._filter_word('en vivo'))
 
     def non_followed_followers(self):
         dif = self._followers() - self._followed()
-        dif_info = self._users(dif)
-        return dict([(u['screen_name'], u['name']) for u in dif_info])
+        return self._screen_names(dif)
+
+    def non_followers_followed(self):
+        dif = self._followed() - self._followers()
+        return self._screen_names(dif)
 
     def follow_non_followed(self, debug):
         nff = self.non_followed_followers()
