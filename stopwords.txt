@@ -17,6 +17,7 @@ aquellos
 aqui
 arriba
 atras
+ayer
 bajo
 bastante
 bien
