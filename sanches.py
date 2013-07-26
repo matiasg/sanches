@@ -222,6 +222,12 @@ class Sanchez(object):
     def _followed(self):
         return set(self.twit.friends.ids()['ids'])
 
+    def followers(self):
+        return self._screen_names(self._followers())
+
+    def followed(self):
+        return self._screen_names(self._followed())
+
     def _users_few(self, ids):
         return self.twit.users.lookup(user_id=','.join([str(i) for i in ids]))
 
