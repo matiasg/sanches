@@ -242,6 +242,12 @@ class Sanchez(object):
         udict = self._users(ids)
         return dict([(u['screen_name'], u['name']) for u in udict])
 
+    def foll_foll(self, screen_name):
+        users = self.twit.users.lookup(screen_name=screen_name)
+        if len(users) == 0:
+            return 0, 0
+        return users[0]['followers_count'], users[0]['friends_count']
+
     def test(self):
         print(self._filter_word('en vivo'))
 
