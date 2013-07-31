@@ -228,6 +228,17 @@ class Sanchez(object):
     def followed(self):
         return self._screen_names(self._followed())
 
+    def random_sample_followers(self, screen_name, pop=1):
+        followers = self.twit.followers.ids(screen_name=screen_name)['ids']
+        chosen = random.sample(followers, pop)
+        return self._users(chosen)
+
+    def country(self, user):
+        try:
+            return user.get('status', {}).get('place', {}).get('country', None)
+        except:
+            return None
+
     def _users_few(self, ids):
         return self.twit.users.lookup(user_id=','.join([str(i) for i in ids]))
 
@@ -259,12 +270,15 @@ class Sanchez(object):
         dif = self._followed() - self._followers()
         return self._screen_names(dif)
 
+    def follow(self, screen_name):
+        self.twit.friendships.create(screen_name=screen_name)
+
     def follow_non_followed(self, debug):
         nff = self.non_followed_followers()
         if debug:
             print('Will follow:', nff)
         for scrn in nff:
-            self.twit.friendships.create(screen_name=scrn)
+            self.follow(scrn)
 
 
 def _get_parser():
