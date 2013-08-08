@@ -273,6 +273,9 @@ class Sanchez(object):
     def follow(self, screen_name):
         self.twit.friendships.create(screen_name=screen_name)
 
+    def unfollow(self, screen_name):
+        self.twit.friendships.destroy(screen_name=screen_name)
+
     def follow_non_followed(self, debug):
         nff = self.non_followed_followers()
         if debug:
