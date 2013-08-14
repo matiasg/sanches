@@ -230,7 +230,7 @@ class Sanchez(object):
 
     def random_sample_followers(self, screen_name, pop=1):
         followers = self.twit.followers.ids(screen_name=screen_name)['ids']
-        chosen = random.sample(followers, pop)
+        chosen = random.sample(followers, min(pop, len(followers)))
         return self._users(chosen)
 
     def country(self, user):
