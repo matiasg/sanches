@@ -2,24 +2,20 @@
 
 import argparse
 import time
-import json
 import os
 import random
 import re
 import string
-import urllib
 from collections import Counter
 from dataclasses import dataclass
 from typing import List
 
 import yaml
 import twitter
-from bs4 import BeautifulSoup
-
-import formats
-
 import wikipedia
 import spacy
+
+import formats
 
 wikipedia.set_lang("es")
 nlp = spacy.load('es_core_news_sm')
@@ -32,6 +28,7 @@ class PublishingData:
     word: str
     page: str
     sentence: str
+    timestamp: int = 0
 
     def make_twitt(self) -> str:
         '''Produce the twitt to be published'''
@@ -41,6 +38,15 @@ class PublishingData:
         '''Tell whether twitt would be ok to publish'''
         twit = self.make_twitt()
         return len(twit) < 280
+
+    def csvline(self) -> str:
+        '''csv serialization'''
+        return f'{self.word}|{self.page}|{self.sentence}|{self.timestamp}'
+
+    @classmethod
+    def from_csvline(cls, line):
+        '''returns a PublishingData from a |-separated line. Converse of csvline'''
+        return cls(*line.split('|'))
 
 
 class Wiki:
@@ -82,44 +88,35 @@ class Wiki:
 
 
 class Sanchez:
-    """Main class, does everything"""
+    """Main class"""
 
-    def __init__(self, keys, stopwords=None, previous=None, non_repeat_time=3600*24*4):
+    def __init__(self, keys, stopwords_file=None, previous=None, non_repeat_time=3600*24*4):
         super().__init__()
-        self.keys = keys
-        self.auth = twitter.OAuth(
+        auth = twitter.OAuth(
                 keys['token'],
                 keys['token_key'],
                 keys['api_key'],
                 keys['api_secret_key'])
 
-        self.twit = twitter.Twitter(auth=self.auth)
+        self.twit = twitter.Twitter(auth=auth)
         self.count = 200
 
         curdir = os.path.abspath(os.path.dirname(__file__))
-        if not stopwords:
-            stopwords = os.path.join(curdir, 'stopwords.txt')
-        with open(stopwords, 'r') as i:
-            self.stopwords = set(l.strip() for l in i)
+        if not stopwords_file:
+            stopwords_file = os.path.join(curdir, 'stopwords.txt')
+        with open(stopwords_file, 'r') as sw_fd:
+            self.stopwords = set(word.strip() for word in sw_fd)
 
         self.previous_file = previous or os.path.join(curdir, 'previous.txt')
 
         self.prev_words = set()
-        self.prev_constructs = dict([(c, 0) for c in formats.formats])
         min_tms = time.time() - non_repeat_time
         if os.path.isfile(self.previous_file):
-            with open(self.previous_file, 'r') as i:
-                for l in i:
-                    lsp = l.strip().split('|')
-                    if len(lsp) == 3:
-                        w, p, t = lsp
-                        c = None
-                    else:
-                        w, c, p, t = lsp
-                    if float(t) > min_tms:
-                        self.prev_words.add(w)
-                        if c:
-                            self.prev_constructs[c] += 1
+            with open(self.previous_file, 'r') as pf_fd:
+                for line in pf_fd:
+                    p_data = PublishingData.from_csvline(line)
+                    if float(p_data.timestamp) > min_tms:
+                        self.prev_words.add(p_data.word)
 
         self._npt = str.maketrans('', '', string.punctuation)
         self.sentences = re.compile(r'[A-Z][^.]{4,}\.')
@@ -150,7 +147,7 @@ class Sanchez:
                 users_counter[user] += 1
 
     def get_words(self, top=15, top2=5):
-        '''return top2 most common 2-word sequence and complete with (top-top2) 1-words.
+        '''return :top2: most common 2-word sequence and complete with (:top: - :top2:) 1-words.
         If the 2-word "A B" is in the top2, then both A and B are subtracted from the 1-words.'''
         self.load_timeline()
         normal_tweets = [' '.join(self._normal(w)
@@ -171,10 +168,10 @@ class Sanchez:
                     cnt2['{0} {1}'.format(*tsp[i : i+2])] += 2
 
         # subtract 2-words from 1-words
-        for ww in cnt2.most_common(top2):
-            wwsplit = ww[0].split()
-            cnt[wwsplit[0]] -= ww[1]
-            cnt[wwsplit[1]] -= ww[1]
+        for two_word in cnt2.most_common(top2):
+            word1, word2 = two_word[0].split()
+            cnt[word1] -= two_word[1]
+            cnt[word2] -= two_word[1]
 
         # take union of most common in cnt and cnt2
         ret = set(cnt2.most_common(top2)) | set(cnt.most_common(top - top2))
@@ -280,16 +277,16 @@ class Sanchez:
             print("Couldn't get an appropriate phrase")
             exit(1)
 
-        print("I'm publishing:", pub_data)
+        print("I'm publishing:", pub_data.make_twitt())
 
         if not dry_run:
             # publish
             self.twit.statuses.update(status=pub_data.make_twitt())
             # save to file
-            pub_data.ts = int(time.time())
-            # pub_data.sentence = pub_data.sentence.replace('\n', ' ')  # make sure each line in previous was one tweet.
+            pub_data.timestamp = int(time.time())
+            pub_data.sentence = pub_data.sentence.replace('\n', ' ')  # make sure each line in previous was one tweet.
             with open(self.previous_file, 'a') as previous:
-                previous.write(f'{pub_data.word}|{pub_data.page}|{pub_data.sentence}|{pub_data.ts}\n')
+                previous.write(f'{pub_data.csvline()}\n')
 
     def _followers(self):
         return set(self.twit.followers.ids()['ids'])
