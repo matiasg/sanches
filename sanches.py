@@ -9,6 +9,8 @@ import re
 import string
 import urllib
 from collections import Counter
+from dataclasses import dataclass
+from typing import List
 
 import yaml
 import twitter
@@ -23,8 +25,26 @@ wikipedia.set_lang("es")
 nlp = spacy.load('es_core_news_sm')
 
 
+@dataclass
+class PublishingData:
+    '''Data class for publishing info'''
+
+    word: str
+    page: str
+    sentence: str
+
+    def make_twitt(self) -> str:
+        '''Produce the twitt to be published'''
+        return f'{self.word}: {self.sentence}'
+
+    def is_ok(self) -> bool:
+        '''Tell whether twitt would be ok to publish'''
+        twit = self.make_twitt()
+        return len(twit) < 280
+
 
 class Wiki:
+    '''Class for dealing with wikipedia'''
 
     @classmethod
     def get_page(cls, word):
@@ -39,7 +59,7 @@ class Wiki:
         return list(doc.sents)
 
     @classmethod
-    def good_sentence(cls, sentence):
+    def good_sentence(cls, sentence: str) -> bool:
         if re.search(r'\[\d+\]', sentence):
             return False
         return True
@@ -48,9 +68,17 @@ class Wiki:
     def random_sentence(cls, word):
         final_word, doc = cls.get_page(word)
         sents = cls.get_sentences(doc)
-        good = [s for s in sents if cls.good_sentence(s.text)]
-        return {'word': final_word, 'sentence': random.choice(good)}
+        pub_datas = [PublishingData(word, final_word, sent.text) for sent in sents]
+        good = [pd for pd in pub_datas if cls.good_sentence(pd.sentence) and pd.is_ok()]
+        return random.choice(good)
 
+    @classmethod
+    def random_sentence_for_words(cls, words: List[str]) -> PublishingData:
+        for word in words:
+            ret = cls.random_sentence(word)
+            if ret is not None and ret.is_ok():
+                return ret
+        return None
 
 
 class Sanchez:
@@ -214,47 +242,54 @@ class Sanchez:
     #                 return {'word': w, 'phrase': phrase, 'construct': construct}
     #     return None
 
-    def ddg(self, words):
-        '''Lookup words in DuckDuckGo'''
-        url = 'http://api.duckduckgo.com/?%s&'
-        defintn = None
-        while not defintn and words:
-            plc = random.randint(0, len(words) - 1)
-            w = words.pop(plc)
-            params = urllib.parse.urlencode({'q': w, 'format': 'json', 'ad': 'es_AR', 'l': 'ar-es'})
-            u = urllib.request.urlopen(url % (params,))
-            j = json.loads(u.read().decode('utf8'))
-            defintn = j['Definition']
-        return w, defintn
+    # def ddg(self, words):
+    #     '''Lookup words in DuckDuckGo'''
+    #     url = 'http://api.duckduckgo.com/?%s&'
+    #     defintn = None
+    #     while not defintn and words:
+    #         plc = random.randint(0, len(words) - 1)
+    #         w = words.pop(plc)
+    #         params = urllib.parse.urlencode({'q': w, 'format': 'json', 'ad': 'es_AR', 'l': 'ar-es'})
+    #         u = urllib.request.urlopen(url % (params,))
+    #         j = json.loads(u.read().decode('utf8'))
+    #         defintn = j['Definition']
+    #     return w, defintn
 
-    def _embelish(self, w, p):
-        d = dict(w=w, p=p)
-        sorted_fmts = sorted(formats.formats,
-                key = lambda c: self.prev_constructs[c])
-        f = random.sample(sorted_fmts[:5], 1)[0]
-        callables = formats.formats[f]
-        if callables:
-            for part in callables:
-                d[part] = callables[part](d[part])
-        return f.format(**d), f
+    # def _embelish(self, w, p):
+    #     d = dict(w=w, p=p)
+    #     sorted_fmts = sorted(formats.formats,
+    #             key = lambda c: self.prev_constructs[c])
+    #     f = random.sample(sorted_fmts[:5], 1)[0]
+    #     callables = formats.formats[f]
+    #     if callables:
+    #         for part in callables:
+    #             d[part] = callables[part](d[part])
+    #     return f.format(**d), f
 
-    def publish(self, debug):
+    def make_twitt(self, publishing_data):
+        pass
+
+    def publish(self, dry_run):
         qtty = 25
         words = [x[0] for x in self.get_words(top=qtty)]
-        if debug: print('Most common words:', words)
+        if dry_run: print('Most common words:', words)
         words = random.sample(words, qtty)
-        wp = Wiki.random_sentence(words)
-        if debug:
-            if wp:
-                print("I'm publishing:", wp)
-            else:
-                print("Couldn't get an appropriate phrase")
-        elif wp:
-            self.twit.statuses.update(status=wp['sentence'])
-            wp['ts'] = int(time.time())
-            wp['sentence'] = wp['sentence'].replace('\n', ' ')  # make sure each line in previous was one tweet.
+        pub_data = Wiki.random_sentence_for_words(words)
+
+        if pub_data is None:
+            print("Couldn't get an appropriate phrase")
+            exit(1)
+
+        print("I'm publishing:", pub_data)
+
+        if not dry_run:
+            # publish
+            self.twit.statuses.update(status=pub_data.make_twitt())
+            # save to file
+            pub_data.ts = int(time.time())
+            # pub_data.sentence = pub_data.sentence.replace('\n', ' ')  # make sure each line in previous was one tweet.
             with open(self.previous_file, 'a') as previous:
-                previous.write('{word}|{sentence}|{ts}\n'.format(**wp))
+                previous.write(f'{pub_data.word}|{pub_data.page}|{pub_data.sentence}|{pub_data.ts}\n')
 
     def _followers(self):
         return set(self.twit.followers.ids()['ids'])
@@ -316,9 +351,9 @@ class Sanchez:
     def unfollow(self, screen_name):
         self.twit.friendships.destroy(screen_name=screen_name)
 
-    def follow_non_followed(self, debug):
+    def follow_non_followed(self, dry_run):
         nff = self.non_followed_followers()
-        if debug:
+        if dry_run:
             print('Will follow:', nff)
         for scrn in nff:
             self.follow(scrn)
@@ -326,7 +361,7 @@ class Sanchez:
 
 def _get_parser():
     parser = argparse.ArgumentParser(description='Publish nonsense in Twitter')
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--test', action='store_true')
     parser.add_argument('--fnf', action='store_true', help='follow non followers')
     return parser
@@ -347,9 +382,9 @@ def main(arguments):
         import sys
         sys.exit()
     if arguments.fnf:
-        snch_snch.follow_non_followed(arguments.debug)
+        snch_snch.follow_non_followed(arguments.dry_run)
     else:
-        snch_snch.publish(arguments.debug)
+        snch_snch.publish(arguments.dry_run)
 
 
 if __name__ == '__main__':
