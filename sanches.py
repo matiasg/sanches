@@ -1,32 +1,69 @@
 #!/usr/bin/env python
 
-
 import argparse
-import config
+import time
 import json
 import os
 import random
 import re
 import string
-import time
-import twitter
 import urllib
-from bs4 import BeautifulSoup
 from collections import Counter
+
+import yaml
+import twitter
+from bs4 import BeautifulSoup
 
 import formats
 
+import wikipedia
+import spacy
 
-class Sanchez(object):
+wikipedia.set_lang("es")
+nlp = spacy.load('es_core_news_sm')
+
+
+
+class Wiki:
+
+    @classmethod
+    def get_page(cls, word):
+        try:
+            text = wikipedia.page(word)
+            return word, nlp(text.content)
+        except wikipedia.DisambiguationError as exc:
+            return cls.get_page(random.choice(exc.options))
+
+    @classmethod
+    def get_sentences(cls, doc):
+        return list(doc.sents)
+
+    @classmethod
+    def good_sentence(cls, sentence):
+        if re.search(r'\[\d+\]', sentence):
+            return False
+        return True
+
+    @classmethod
+    def random_sentence(cls, word):
+        final_word, doc = cls.get_page(word)
+        sents = cls.get_sentences(doc)
+        good = [s for s in sents if cls.good_sentence(s.text)]
+        return {'word': final_word, 'sentence': random.choice(good)}
+
+
+
+class Sanchez:
     """Main class, does everything"""
+
     def __init__(self, keys, stopwords=None, previous=None, non_repeat_time=3600*24*4):
-        super(Sanchez, self).__init__()
+        super().__init__()
         self.keys = keys
         self.auth = twitter.OAuth(
                 keys['token'],
                 keys['token_key'],
-                keys['con_secret'],
-                keys['con_secret_key'])
+                keys['api_key'],
+                keys['api_secret_key'])
 
         self.twit = twitter.Twitter(auth=self.auth)
         self.count = 200
@@ -57,11 +94,11 @@ class Sanchez(object):
                             self.prev_constructs[c] += 1
 
         self._npt = str.maketrans('', '', string.punctuation)
-        self.sentences = re.compile('[A-Z][^.]{4,}\.')
+        self.sentences = re.compile(r'[A-Z][^.]{4,}\.')
         self.chars_to_replace = [(re.compile('[\n:]+'), ': ')]
 
-    def _normal(self, w):
-        return w.translate(self._npt).lower()
+    def _normal(self, word):
+        return word.translate(self._npt).lower()
 
     def _filter_word(self, w):
         if not w: return False
@@ -75,30 +112,33 @@ class Sanchez(object):
         return True
 
     def load_timeline(self):
-        tl = self.twit.statuses.home_timeline(count=self.count)
-        self.tl = []
+        timeline = self.twit.statuses.home_timeline(count=self.count)
+        self.timeline = []
         users_counter = Counter()
-        for t in tl:
-            user = t.get('user', {}).get('screen_name', '')
+        for twitt in timeline:
+            user = twitt.get('user', {}).get('screen_name', '')
             if users_counter[user] < 5:
-                self.tl.append(t)
+                self.timeline.append(twitt)
                 users_counter[user] += 1
 
     def get_words(self, top=15, top2=5):
         '''return top2 most common 2-word sequence and complete with (top-top2) 1-words.
         If the 2-word "A B" is in the top2, then both A and B are subtracted from the 1-words.'''
         self.load_timeline()
-        normal_tweets = [' '.join(self._normal(w) for tw in self.tl for w in tw['text'].split())]
+        normal_tweets = [' '.join(self._normal(w)
+                                  for tw in self.timeline
+                                  for w in tw['text'].split())]
         cnt = Counter()
         cnt2 = Counter()
 
         # count 1-words and 2-words
         for tweet in normal_tweets:
             tsp = tweet.split()
-            for i in range(len(tsp)):
-                if self._filter_word(tsp[i]):
-                    cnt[tsp[i]] += 1
-                if i + 1 >= len(tsp): continue
+            for i, word in enumerate(tsp):
+                if self._filter_word(word):
+                    cnt[word] += 1
+                if i + 1 >= len(tsp):
+                    continue
                 if self._filter_word(' '.join(tsp[i : i+2])):
                     cnt2['{0} {1}'.format(*tsp[i : i+2])] += 2
 
@@ -112,67 +152,67 @@ class Sanchez(object):
         ret = set(cnt2.most_common(top2)) | set(cnt.most_common(top - top2))
         return ret
 
-    def _take_out_tags(self, phrase):
-        bs = BeautifulSoup(phrase)
-        parts = bs.findAll(text=True)
-        notags = ''.join(parts)
-        for reg, subst in self.chars_to_replace:
-            notags = reg.sub(subst, notags)
-        return notags
+    # def _take_out_tags(self, phrase):
+    #     bs = BeautifulSoup(phrase)
+    #     parts = bs.findAll(text=True)
+    #     notags = ''.join(parts)
+    #     for reg, subst in self.chars_to_replace:
+    #         notags = reg.sub(subst, notags)
+    #     return notags
 
-    def get_twitter_phrase(self, word, txt, debug):
-        phrases = self.sentences.findall(txt)
-        mixed_phs = random.sample(phrases, len(phrases))
-        for ph in mixed_phs:
-            ph_notags = self._take_out_tags(ph)
-            if self._is_ok(ph_notags):
-                if debug: print('Considering phrase:', ph_notags)
-                possible_ret, construct = self._embelish(word, ph_notags)
-                if self._is_ok_for_twitter(possible_ret):
-                    return possible_ret, construct
-        return None, None
+    # def get_twitter_phrase(self, word, txt, debug):
+    #     phrases = self.sentences.findall(txt)
+    #     mixed_phs = random.sample(phrases, len(phrases))
+    #     for ph in mixed_phs:
+    #         ph_notags = self._take_out_tags(ph)
+    #         if self._is_ok(ph_notags):
+    #             if debug: print('Considering phrase:', ph_notags)
+    #             possible_ret, construct = self._embelish(word, ph_notags)
+    #             if self._is_ok_for_twitter(possible_ret):
+    #                 return possible_ret, construct
+    #     return None, None
 
-    def _is_ok(self, ph):
-        if len(ph) < 8: return False  # don't want slim phrases
-        if 4 < ph.find(':') < 15: return False  # don't want definitions
-        if ph.startswith('REDIRECCIÓN') or ph.startswith('REDIRECT'): return False  # TODO: deal with redirections
-        if '[' in ph: return False  # avoid
-        phlower = ph.lower()
-        if 'wiki' in phlower: return False  # avoid Wikimedia, Wikiversity, etc.
-        if 'wikciona' in phlower: return False  # avoid wikcionario
-        if 'desambiguac' in phlower: return False  # avoid disambiguation phrases
-        # TODO: add DISAMBIG (see independiente, carlos)
-        return True
+    # def _is_ok(self, ph):
+    #     if len(ph) < 8: return False  # don't want slim phrases
+    #     if 4 < ph.find(':') < 15: return False  # don't want definitions
+    #     if ph.startswith('REDIRECCIÓN') or ph.startswith('REDIRECT'): return False  # TODO: deal with redirections
+    #     if '[' in ph: return False  # avoid
+    #     phlower = ph.lower()
+    #     if 'wiki' in phlower: return False  # avoid Wikimedia, Wikiversity, etc.
+    #     if 'wikciona' in phlower: return False  # avoid wikcionario
+    #     if 'desambiguac' in phlower: return False  # avoid disambiguation phrases
+    #     # TODO: add DISAMBIG (see independiente, carlos)
+    #     return True
 
-    def _is_ok_for_twitter(self, ph):
-        return len(ph) <= 140
+    # def _is_ok_for_twitter(self, ph):
+    #     return len(ph) <= 140
 
-    def wiki(self, words, debug):
-        '''Lookup words in wikipedia'''
-        url = 'https://es.wikipedia.org/w/api.php?action=query&prop=info&format=json&titles=%s'
-        page_url = 'https://es.wikipedia.org/w/api.php?%s'
-        while words:
-            w = words.pop()
-            if debug: print('Trying word:', w)
-            whole_url = url % urllib.parse.quote(w)
-            try:
-                u = urllib.request.urlopen(whole_url)
-                j = json.loads(u.read().decode('utf8'))
-            except urllib.error.URLError:
-                continue  # this will most likely not work. Log something!
-            ids = j.get('query', {}).get('pages', None)
-            if not ids or '-1' in ids: continue
-            for i in ids:
-                params = urllib.parse.urlencode({'action': 'query', 'pageids': i, 'prop': 'extracts', 'format': 'json'})
-                def_url = page_url % params
-                if debug: print('Reading', def_url)
-                u = urllib.request.urlopen(def_url)
-                j = json.loads(u.read().decode('utf8'))
-                txt = j.get('query', {}).get('pages', {}).get(i, {}).get('extract', '')
-                phrase, construct = self.get_twitter_phrase(w, txt, debug)
-                if phrase:
-                    return {'word': w, 'phrase': phrase, 'construct': construct}
-        return None
+    # def wiki(self, words, debug):
+    #     '''Lookup words in wikipedia'''
+    #     url = 'https://es.wikipedia.org/w/api.php?action=query&prop=info&format=json&titles=%s'
+    #     page_url = 'https://es.wikipedia.org/w/api.php?%s'
+    #     while words:
+    #         w = words.pop()
+    #         if debug: print('Trying word:', w)
+    #         whole_url = url % urllib.parse.quote(w)
+    #         try:
+    #             u = urllib.request.urlopen(whole_url)
+    #             j = json.loads(u.read().decode('utf8'))
+    #         except urllib.error.URLError:
+    #             continue  # this will most likely not work. Log something!
+    #         ids = j.get('query', {}).get('pages', None)
+    #         if not ids or '-1' in ids: continue
+    #         for i in ids:
+    #             params = urllib.parse.urlencode({'action': 'query', 'pageids': i, 'prop': 'extracts', 'format': 'json'})
+    #             def_url = page_url % params
+    #             if debug: print('Reading', def_url)
+    #             u = urllib.request.urlopen(def_url)
+    #             j = json.loads(u.read().decode('utf8'))
+    #             txt = j.get('query', {}).get('pages', {}).get(i, {}).get('extract', '')
+    #             phrase, construct = self.get_twitter_phrase(w, txt, debug)
+    #             if phrase:
+    #                 return {'word': w, 'phrase': phrase, 'construct': construct}
+    #     return None
 
     def ddg(self, words):
         '''Lookup words in DuckDuckGo'''
@@ -203,18 +243,18 @@ class Sanchez(object):
         words = [x[0] for x in self.get_words(top=qtty)]
         if debug: print('Most common words:', words)
         words = random.sample(words, qtty)
-        wp = self.wiki(words, debug)
+        wp = Wiki.random_sentence(words)
         if debug:
             if wp:
-                print("I'm publishing:", wp['phrase'])
+                print("I'm publishing:", wp)
             else:
                 print("Couldn't get an appropriate phrase")
         elif wp:
-                self.twit.statuses.update(status=wp['phrase'])
-                wp['ts'] = int(time.time())
-                wp['phrase'] = wp['phrase'].replace('\n', ' ')  # make sure each line in previous was one tweet.
-                with open(self.previous_file, 'a') as o:
-                    o.write('{word}|{construct}|{phrase}|{ts}\n'.format(**wp))
+            self.twit.statuses.update(status=wp['sentence'])
+            wp['ts'] = int(time.time())
+            wp['sentence'] = wp['sentence'].replace('\n', ' ')  # make sure each line in previous was one tweet.
+            with open(self.previous_file, 'a') as previous:
+                previous.write('{word}|{sentence}|{ts}\n'.format(**wp))
 
     def _followers(self):
         return set(self.twit.followers.ids()['ids'])
@@ -292,9 +332,15 @@ def _get_parser():
     return parser
 
 
+def load_config():
+    with open('config.yaml') as ci:
+        conf = yaml.load(ci, Loader=yaml.Loader)
+    return conf
+
+
 def main(arguments):
     """does everything (?)"""
-    snch_snch_dict = config.authkeys
+    snch_snch_dict = load_config()
     snch_snch = Sanchez(snch_snch_dict)
     if arguments.test:
         snch_snch.test()
