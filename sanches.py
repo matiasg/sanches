@@ -17,16 +17,9 @@ import twitter
 import wikipedia
 import spacy
 
-import formats
-
 
 wikipedia.set_lang("es")
 nlp = spacy.load('es_core_news_sm')
-# ignore BeautifulSoup config problem with wikipedia lib (GuessedAtParserWarning)
-warnings.catch_warnings()
-warnings.simplefilter("ignore")
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -109,7 +102,9 @@ class Wiki:
         sents = cls.get_sentences(doc)
         pub_datas = [PublishingData(word, final_word, sent.text) for sent in sents]
         good = [pd for pd in pub_datas if cls.good_sentence(pd.sentence) and pd.is_ok()]
-        return random.choice(good)
+        weights = [1/i for i, _ in enumerate(good, 1)]
+        logger.debug('Good sentences: %s', good)
+        return random.choices(good, weights=weights, k=1)[0]
 
     @classmethod
     def random_sentence_for_words(cls, words: List[str]) -> PublishingData:
@@ -124,7 +119,6 @@ class TwitterManager:
     '''Class for dealing with Twitter API'''
 
     def __init__(self, keys):
-        super().__init__()
         auth = twitter.OAuth(
                 keys['token'],
                 keys['token_key'],
@@ -415,7 +409,7 @@ def main(arguments):
 if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
+    ch.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter('[%(levelname)s] %(message)s')
     ch.setFormatter(formatter)
