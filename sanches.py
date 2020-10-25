@@ -10,7 +10,6 @@ import logging
 from collections import Counter
 from dataclasses import dataclass
 from typing import List, Dict
-import warnings
 
 import yaml
 import twitter
@@ -34,7 +33,7 @@ class PublishingData:
 
     def make_twitt(self) -> str:
         '''Produce the twitt to be published'''
-        return f'{self.word}: {self.sentence}'
+        return f'{self.sentence}'
 
     def is_ok(self) -> bool:
         '''Tell whether twitt would be ok to publish'''
