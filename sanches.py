@@ -58,7 +58,7 @@ class Wiki:
         try:
             logger.debug("Looking for page for: %s", word)
             text = wikipedia.page(word)
-            return word, nlp(text.content)
+            return text.original_title, nlp(text.content)
         except wikipedia.DisambiguationError as exc:
             options = set(exc.options) - {word}  # avoid choosing again the same word
             next_word = random.choice(list(options))
