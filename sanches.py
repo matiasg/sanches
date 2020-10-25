@@ -167,7 +167,7 @@ class TwitterManager:
 
     def _words_from_tweet(self, tweet):
         doc = nlp(tweet['text'])
-        nonstop = [token.text for token in doc if not token.is_stop]
+        nonstop = [token.text for token in doc if token.is_alpha and not token.is_stop ]
         return nonstop
 
     def get_clean_timeline_as_texts(self) -> List[str]:
