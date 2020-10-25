@@ -18,7 +18,7 @@ import spacy
 
 
 wikipedia.set_lang("es")
-nlp = spacy.load('es_core_news_sm')
+nlp = spacy.load('es_core_news_md')
 logger = logging.getLogger(__name__)
 
 
@@ -88,6 +88,8 @@ class Wiki:
             good = False  # avoid wikcionario
         if 'desambiguac' in sent_lower:
             good = False  # avoid disambiguation sentences
+        if re.search(r'^== .* =$', sentence):
+            good = False  # avoid titles
 
         return good
 
@@ -153,9 +155,9 @@ class TwitterManager:
         return self._merge(tweet['entities'])
 
     def _words_from_tweet(self, tweet):
-        # TODO: use spacy
-        # TODO 2: what happens if tweet['truncated'] is True?
-        return tweet['text'].split()
+        doc = nlp(tweet['text'])
+        nonstop = [token.text for token in doc if not token.is_stop]
+        return nonstop
 
     def get_clean_timeline_as_texts(self) -> List[str]:
         timeline = self.get_timeline()
