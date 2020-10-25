@@ -66,8 +66,9 @@ class Wiki:
             return cls.get_page(next_word)
 
     @classmethod
-    def get_sentences(cls, doc):
-        return list(doc.sents)
+    def get_good_sentences(cls, doc):
+        return [sentence for sentence in doc.sents
+                if cls.good_sentence(sentence.text)]
 
     @classmethod
     def good_sentence(cls, sentence: str) -> bool:
@@ -95,15 +96,22 @@ class Wiki:
         return True
 
     @classmethod
-    def random_sentence(cls, word):
+    def random_sentence(cls, word: str) -> PublishingData:
+        '''returns a random sentence for :word:
+
+        First looks for word in wikipedia using cls.get_page()
+        Then, splits doc and filters sentences with cls.good_sentence()
+        Then, filters data with PublishingData.is_ok()
+        Finally, selects a random sentence with decreasing weights.
+        '''
         try:
             final_word, doc = cls.get_page(word)
         except wikipedia.PageError:
             return None
 
-        sents = cls.get_sentences(doc)
+        sents = cls.get_good_sentences(doc)
         pub_datas = [PublishingData(word, final_word, sent.text) for sent in sents]
-        good = [pd for pd in pub_datas if cls.good_sentence(pd.sentence) and pd.is_ok()]
+        good = [pd for pd in pub_datas if pd.is_ok()]
         weights = [1/i for i, _ in enumerate(good, 1)]
         for sentence in good:
             logger.debug('Good sentence: %s', sentence)
@@ -111,9 +119,10 @@ class Wiki:
 
     @classmethod
     def random_sentence_for_words(cls, words: List[str]) -> PublishingData:
+        '''returns the first non-null cls.random_sentence(word) for word in words'''
         for word in words:
             ret = cls.random_sentence(word)
-            if ret is not None and ret.is_ok():
+            if ret is not None:
                 return ret
         return None
 
