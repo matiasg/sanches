@@ -72,26 +72,27 @@ class Wiki:
     @classmethod
     def good_sentence(cls, sentence: str) -> bool:
         '''returns whether a sentence is good for a tweet'''
-        good = True
+        # pylint: disable=too-many-return-statements
+
         if re.search(r'\[\d+\]', sentence):
-            good = False  # don't want footnotes
+            return False  # don't want footnotes
         if len(sentence) < 8:
-            good = False  # don't want slim sentences
+            return False  # don't want slim sentences
         if 4 < sentence.find(':') < 15:
-            good = False  # don't want definitions
+            return False  # don't want definitions
         if sentence.startswith('REDIRECCIÓN') or sentence.startswith('REDIRECT'):
-            good = False  # TODO: deal with redirections
+            return False  # TODO: deal with redirections
+        if re.search(r'^=+ .* =+\s', sentence):
+            return False  # avoid titles
         sent_lower = sentence.lower()
         if 'wiki' in sent_lower:
-            good = False  # avoid Wikimedia, Wikiversity, etc.
+            return False  # avoid Wikimedia, Wikiversity, etc.
         if 'wikciona' in sent_lower:
-            good = False  # avoid wikcionario
+            return False  # avoid wikcionario
         if 'desambiguac' in sent_lower:
-            good = False  # avoid disambiguation sentences
-        if re.search(r'^== .* =$', sentence):
-            good = False  # avoid titles
+            return False  # avoid disambiguation sentences
 
-        return good
+        return True
 
     @classmethod
     def random_sentence(cls, word):
@@ -104,7 +105,8 @@ class Wiki:
         pub_datas = [PublishingData(word, final_word, sent.text) for sent in sents]
         good = [pd for pd in pub_datas if cls.good_sentence(pd.sentence) and pd.is_ok()]
         weights = [1/i for i, _ in enumerate(good, 1)]
-        logger.debug('Good sentences: %s', good)
+        for sentence in good:
+            logger.debug('Good sentence: %s', sentence)
         return random.choices(good, weights=weights, k=1)[0]
 
     @classmethod
@@ -170,7 +172,7 @@ class TwitterManager:
         return ret
 
     def publish(self, content):
-        logger.info('publishing: %s', content)
+        '''publish :content: on twitter'''
         self.twit.statuses.update(status=content)
 
     def _followers(self):
@@ -268,22 +270,26 @@ class Sanchez:
         return word.translate(self._npt).lower()
 
     def good_word(self, word: str) -> bool:
-        good = True
+        '''decides whether a word is good for publishing something'''
+        # pylint: disable=too-many-return-statements
         if not word:
-            good = False
+            return False
         if all(x in self.stopwords for x in word.split()):
-            good = False
+            return False
         if word in self.prev_words:
-            good = False  # no previous words
+            return False  # no previous words
         if len(word) < 3:
-            good = False  # no short words
+            return False  # no short words
+        if '…' in word:
+            return False  # new twitter API truncates tweets and adds '…'
         # if word.startswith('@'):
-        #     good = False  # no usernames
+        #     return False  # no usernames
         # if word.startswith('#'):
-        #     good = False  # no hashtags
+        #     return False  # no hashtags
         if word.startswith('https'):
-            good = False
-        return good
+            return False
+
+        return True
 
     def get_words(self, top=15, top2=5):
         '''return :top2: most common 2-word sequence and complete with (:top: - :top2:) 1-words.
